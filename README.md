@@ -27,11 +27,11 @@ A unified codebase for semantic tasking → motion planning → manipulation →
 ├── build/            # local build artifacts (ignored)
 ├── install/          # local install artifacts (ignored)
 ├── log/              # local logs (ignored)
-├── manipulators/     # your code
+├── manipulators/     
 ├── maps/             # map files
 ├── platform/         # platform configs
 ├── sensors/          # sensor setups
-├── src/               # ROS 2 packages (3 yours + 5 vendored clearpath)
+├── src/               # ROS 2 packages 
 ├── dependencies.repos
 ├── robot.srdf.xacro
 ├── robot.urdf.xacro

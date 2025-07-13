@@ -1,0 +1,19 @@
+# Colcon/ROS2 build artifacts
+build/
+install/
+log/
+
+# Optional extra colcon workspace metadata
+.colcon_workspace
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# OS cruft
+.DS_Store
+

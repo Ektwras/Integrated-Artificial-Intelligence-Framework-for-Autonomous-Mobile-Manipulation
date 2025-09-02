@@ -36,6 +36,10 @@ This repository provides the reference implementation for an integrated AI–rob
 ## Steps ##
 
 # 1) Clone (SSH shown; HTTPS+PAT also works)
+  ```bash
+  sudo apt update
+  sudo apt install -y python3-colcon-common-extensions
+
 git clone git@github.com:Ektwras/Integrated-Artificial-Intelligence-Framework-for-Autonomous-Mobile-Manipulation.git ws
 cd ws
 
@@ -51,13 +55,13 @@ set -u
 # 4) Run demo
 ./scripts/run_demo.sh
 # (launches: ros2 launch jackal_bringup jackal_sim.launch.py)
+```
 
-
-## Citation
+## Citation ##
 
 If this framework is useful in your research, please cite:
 
-@software{sofiannopoulos2025ai_mobmanip,
+@software{sofianopoulos2025JACKAL_LLM,
   author  = {Ektoras Sofianopoulos},
   title   = {Integrated AI Framework for Autonomous Mobile Manipulation},
   year    = {2025},

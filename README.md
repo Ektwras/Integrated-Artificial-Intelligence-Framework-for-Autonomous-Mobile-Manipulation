@@ -22,16 +22,31 @@ This repository provides the reference implementation for an integrated AI–rob
 3. **Reproducible workspace** (Humble/colcon) with vendored modifications of Clearpath packages and scripts for one-command build/run.  
 
 ## Repository Layout
-```plaintext
-├── build/            # local build artifacts (ignored)
-├── install/          # local install artifacts (ignored)
-├── log/              # local logs (ignored)
-├── manipulators/     # manipulator configs/aux files
-├── maps/             # navigation maps (if used)
-├── platform/         # platform descriptions/config
-├── sensors/          # sensor configs
-├── src/              # ROS 2 packages (authored + vendored)
-├── dependencies.repos
-├── robot.srdf.xacro  # SRDF/Xacro (semantic robot)
-├── robot.urdf.xacro  # URDF/Xacro  (robot model)
-└── robot.yaml        # configuration parameters
+`├── src/                  # ROS 2 packages
+│   ├── jackal_bringup/   # simulation bringup
+│   ├── jackal_perception/ # YOLOv8-based perception
+│   ├── jackal_perception_interfaces/ # action/message definitions
+│   ├── mobile_manipulation_coordinator/ # task sequencing logic
+│   ├── llm_interface/    # integration with large language models
+│   └── clearpath_*       # vendored Clearpath packages
+├── scripts/              # build and demo scripts
+├── robot.urdf.xacro      # robot model
+├── robot.srdf.xacro      # semantic robot description
+├── robot.yaml            # robot configuration
+└── requirements.txt      # Python dependencies
+
+## Citation
+
+If this framework is useful in your research, please cite:
+
+@software{sofiannopoulos2025ai_mobmanip,
+  author  = {Ektwras (Manos Sofianopoulos)},
+  title   = {Integrated AI Framework for Autonomous Mobile Manipulation},
+  year    = {2025},
+  version = {v0.2.0},
+  url     = {https://github.com/Ektwras/Integrated-Artificial-Intelligence-Framework-for-Autonomous-Mobile-Manipulation}
+}
+
+## License
+
+Apache License 2.0 © 2025 Ektoras Sofianopoulos

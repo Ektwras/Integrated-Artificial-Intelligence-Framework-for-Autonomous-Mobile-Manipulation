@@ -5,7 +5,7 @@
 #
 # Description:
 # This launch file provides a robust, staged startup for the entire
-# simulation stack. It uses generous TimerActions to ensure each critical
+# simulation stack. It uses TimerActions to ensure each critical
 # component has sufficient time to initialize before the next stage begins,
 # preventing race conditions and ensuring a consistent launch.
 # =============================================================================
@@ -75,6 +75,8 @@ def generate_launch_description():
     pkg_jackal_bringup = get_package_share_directory('jackal_bringup')
     pkg_llm_interface = get_package_share_directory('llm_interface')
     pkg_mobile_manipulation_coordinator = get_package_share_directory('mobile_manipulation_coordinator')
+    # --- ADDED: jackal_perception package path
+    pkg_jackal_perception = get_package_share_directory('jackal_perception')
     
 
     
@@ -122,9 +124,16 @@ def generate_launch_description():
                 ]
             ),
             IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(os.path.join(pkg_clearpath_manipulators, 'launch', 'moveit.launch.py')),
-                launch_arguments={'setup_path': ws_str, 'use_sim_time': 'true'}.items()
-            ),
+                PythonLaunchDescriptionSource(
+                    os.path.join(pkg_clearpath_manipulators, "launch", "moveit.launch.py")),
+                launch_arguments={
+                    "setup_path": ws_str,
+                    "use_sim_time": "true",
+                    "extra_semantic":
+                        str(Path.home() /
+                            "ros2_clearpath_ws/src/clearpath_common/clearpath_manipulators/config/world_joint.srdf")
+                }.items()
+            )
         ]
     )
 
@@ -166,6 +175,11 @@ def generate_launch_description():
                 PythonLaunchDescriptionSource(os.path.join(pkg_clearpath_viz, 'launch', 'view_moveit.launch.py')),
                 launch_arguments={'namespace': 'j100_0000', 'use_sim_time': 'true'}.items()
             ),
+            # --- ADDED: start the perception node (global namespace; topics are absolute in params)
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(os.path.join(pkg_jackal_perception, 'launch', 'perception.launch.py')),
+                launch_arguments={'use_sim_time': 'true'}.items()
+            ),
             Node(
                 package='mobile_manipulation_coordinator',
                 executable='coordinator',
@@ -175,7 +189,18 @@ def generate_launch_description():
             ),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(os.path.join(pkg_llm_interface, 'launch', 'chat.launch.py'))
-            )
+            ),
+            
+            TimerAction(
+                period=5.0,          
+                actions=[
+                    Node(
+                        package='jackal_bringup',
+                        executable='add_scene_objects',  
+                        namespace='j100_0000',
+                        output='screen',
+                        parameters=[{"use_sim_time": True}])
+                ])
         ]
     )
 

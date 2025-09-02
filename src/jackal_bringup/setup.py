@@ -22,7 +22,9 @@ setup(
             "initial_pose_pub = jackal_bringup.initial_pose_pub:main",
 
             
-            "pose_init_once = jackal_bringup.pose_init_once:main",
+            "add_scene_objects = jackal_bringup.add_scene_objects:main",
+
+            
         ],
     },
 

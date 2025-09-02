@@ -1,0 +1,24 @@
+/**:
+  ros__parameters:
+    color_image_topic: "/j100_0000/sensors/camera_0/color/image"
+    depth_image_topic: "/j100_0000/sensors/camera_0/depth/image"
+    camera_info_topic: "/j100_0000/sensors/camera_0/color/camera_info"
+
+    action_name: "perception/detect_object"
+    target_frame: "map"
+
+    #  detection 
+    model_path: "/home/ektoras/ros2_clearpath_ws/src/jackal_perception/models/best.pt"
+    confidence: 0.35
+    iou: 0.45
+
+    
+    show_debug_view: true
+    publish_debug_image: true
+    debug_image_topic: "perception/debug_image"
+
+    class_aliases:
+          - "red ball=red_ball"
+          - "ball=red_ball"
+          - "cube=green_cube"
+          - "green cube=green_cube"

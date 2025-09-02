@@ -1,0 +1,3 @@
+<!-- world_joint.srdf -->
+<virtual_joint name="world_joint" type="floating"
+               parent_frame="odom" child_link="base_link"/>

@@ -1,3 +1,4 @@
 shelves:      {x: 9.379,  y:  3.925,  yaw:  0.641}
 chairs:       {x: 13.162, y: -3.706,  yaw: -0.186}
 base_start:   {x: 0.000,  y:  0.000,  yaw:  0.000}
+objects:      {x: 8.25,  y: -1.893,  yaw: -0.302}

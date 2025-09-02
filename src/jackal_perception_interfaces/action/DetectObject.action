@@ -1,0 +1,13 @@
+# Goal
+string class_id
+string target_color
+string detector
+---
+# Result
+bool success
+string message
+geometry_msgs/PoseStamped pose
+float32 confidence
+---
+# Feedback
+float32 progress

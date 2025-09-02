@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eo pipefail
+
+# Source ROS & this workspace safely even if nounset is enabled in the shell
+set +u
 source /opt/ros/humble/setup.bash
 source install/setup.bash
-# TODO: replace with your real package + launch
+set -u
+
+# Launch the demo
 ros2 launch jackal_bringup jackal_sim.launch.py

@@ -3,17 +3,16 @@ build/
 install/
 log/
 
-# Optional extra colcon workspace metadata
+# colcon workspace metadata
 .colcon_workspace
 
-# IDE/editor
+# Editors
 .vscode/
 .idea/
 
-# Python caches
+# Python cache
 __pycache__/
 *.py[cod]
 
 # OS cruft
 .DS_Store
-

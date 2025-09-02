@@ -22,7 +22,7 @@ This repository provides the reference implementation for an integrated AI–rob
 3. **Reproducible workspace** (Humble/colcon) with vendored modifications of Clearpath packages and scripts for one-command build/run.
 
 
-## How to Recreate (Essentials Only)
+## How to Recreate 
 
 **Requirements**
 - Ubuntu 22.04
@@ -32,27 +32,9 @@ This repository provides the reference implementation for an integrated AI–rob
   sudo apt update
   sudo apt install -y python3-colcon-common-extensions
 
-├── src/                                   # ROS 2 packages
-│   ├── jackal_bringup/                    # simulation bringup
-│   ├── jackal_perception/                 # YOLOv8-based perception (models/, params/, launch/)
-│   ├── jackal_perception_interfaces/      # action/message definitions
-│   ├── mobile_manipulation_coordinator/   # task sequencing/state machine
-│   ├── llm_interface/                     # LLM integration and landmarks
-│   ├── clearpath_common/                  # vendored Clearpath packages (modified)
-│   ├── clearpath_simulator/               # simulator worlds/launchers
-│   ├── clearpath_platform_*               # platform descriptions, msgs, URDF/Xacro
-│   └── ...                                # other support pkgs
-├── scripts/                               # reproducible workflow
-│   ├── build.sh                           # rosdep + pip + colcon build
-│   ├── install_rosdeps.sh                 # system/ROS deps
-│   └── run_demo.sh                        # default demo launcher
-├── robot.urdf.xacro                       # robot model (URDF/Xacro)
-├── robot.srdf.xacro                       # semantic robot (SRDF/Xacro)
-├── robot.yaml                             # robot configuration
-├── requirements.txt                       # Python deps (e.g., openai)
-└── (build/ install/ log/ ignored by git)
 
-**Steps**
+## Steps ##
+
 # 1) Clone (SSH shown; HTTPS+PAT also works)
 git clone git@github.com:Ektwras/Integrated-Artificial-Intelligence-Framework-for-Autonomous-Mobile-Manipulation.git ws
 cd ws

@@ -1,6 +1,8 @@
 # Integrated Artificial Intelligence Framework for Autonomous Mobile Manipulation
 **ROS 2 Humble · colcon · v0.2.0**
 
+**NOT YET REPRODUCIBLE - MISSING BASHRC CONFIGURATION GUIDE**
+
 ## Abstract
 This repository provides the reference implementation for an integrated AI–robotics framework that translates **semantic tasking** (natural-language goals) into **navigation** and **manipulation** behaviors on a mobile robot. The system couples a language-aware coordinator with classical motion planning and visual perception to realize end-to-end **mobile manipulation** in simulation on a Clearpath Jackal with a 6-DoF arm. The codebase is organized for **reproducible builds**, and **extensible experimentation**.
 

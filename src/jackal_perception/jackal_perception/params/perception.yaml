@@ -5,7 +5,7 @@
     camera_info_topic: "/j100_0000/sensors/camera_0/color/camera_info"
 
     action_name: "perception/detect_object"
-    target_frame: "map"
+    target_frame: "base_link"
 
     #  detection 
     model_path: "/home/ektoras/ros2_clearpath_ws/src/jackal_perception/models/best.pt"

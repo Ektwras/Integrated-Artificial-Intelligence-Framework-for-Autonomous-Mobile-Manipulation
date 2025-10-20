@@ -175,14 +175,13 @@ def generate_launch_description():
                 PythonLaunchDescriptionSource(os.path.join(pkg_clearpath_viz, 'launch', 'view_moveit.launch.py')),
                 launch_arguments={'namespace': 'j100_0000', 'use_sim_time': 'true'}.items()
             ),
-            # --- ADDED: start the perception node (global namespace; topics are absolute in params)
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(os.path.join(pkg_jackal_perception, 'launch', 'perception.launch.py')),
                 launch_arguments={'use_sim_time': 'true'}.items()
             ),
             Node(
                 package='mobile_manipulation_coordinator',
-                executable='coordinator',
+                executable='coordinator_v1',
                 namespace='j100_0000',
                 output='screen',
                 parameters=[{"use_sim_time": True}]

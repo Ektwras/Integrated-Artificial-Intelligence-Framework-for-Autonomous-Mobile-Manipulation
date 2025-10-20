@@ -23,6 +23,9 @@ def generate_launch_description():
             name='perception_server',
             output='screen',
             parameters=[params_file, {'use_sim_time': LaunchConfiguration('use_sim_time')}],
-            # inherit whatever namespace you pass with --ros-args -r __ns:=/j100_0000
+            remappings=[
+                ("/tf", "/j100_0000/tf"),
+                ("/tf_static", "/j100_0000/tf_static"),
+            ],
         )
     ])

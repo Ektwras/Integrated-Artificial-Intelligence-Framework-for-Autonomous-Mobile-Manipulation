@@ -2,17 +2,23 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>mobile_manipulation_coordinator</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <version>0.1.0</version>
+  <description>Coordinator node(s) to sequence navigation and perception actions (Nav2 + DetectObject).</description>
+
   <maintainer email="ektoras.sofianopoulos@gmail.com">ektoras</maintainer>
-  <license>Apache License 2.0</license>
+  <license>Apache-2.0</license>
 
+  <!-- Core runtime deps -->
   <depend>rclpy</depend>
-  <depend>nav2_msgs</depend>
-  <depend>control_msgs</depend>
-  <depend>trajectory_msgs</depend>
   <depend>geometry_msgs</depend>
+  <depend>nav2_msgs</depend>
+  <depend>jackal_perception_interfaces</depend>
 
+  <!-- (Optional) If you still use these elsewhere, keep them. Otherwise safe to remove. -->
+ <depend>control_msgs</depend> 
+ <depend>trajectory_msgs</depend> 
+
+  <!-- Test deps -->
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>

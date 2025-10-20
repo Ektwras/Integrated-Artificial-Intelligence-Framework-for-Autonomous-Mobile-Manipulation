@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>mmc_msgs</name>
+  <version>0.0.1</version>
+  <description>Interfaces for Mobile Manipulation Coordinator</description>
+
+  <maintainer email="ektoras.sofianopoulos@gmail.com">ektoras</maintainer>
+  <license>Apache-2.0</license>
+
+  <!-- Build tools -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+
+  <!-- Interface dependencies -->
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>builtin_interfaces</depend>
+
+  <!-- Runtime for generated code -->
+  <exec_depend>rosidl_default_runtime</exec_depend>
+
+  <!-- IMPORTANT: must be top-level (not under <export>) -->
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

@@ -5,8 +5,10 @@ def generate_launch_description():
     chat_node = Node(
         package="llm_interface",
         executable="chat",
-        # Open a separate terminal so the REPL has stdin/stdout
-        prefix="gnome-terminal --wait --",    # KDE → 'konsole -e', headless → drop prefix
+        # Open a wider terminal with a custom title; all flags are safe no-ops
+        # if the system doesn't support extras. No color/profile tweaks here to
+        # avoid dependency on local GNOME profiles.
+        prefix="gnome-terminal --wait --profile=jackal --title='JACKAL AI' --",
         output="screen",
         parameters=[{"use_sim_time": False}],  # set True if you run with /clock
     )

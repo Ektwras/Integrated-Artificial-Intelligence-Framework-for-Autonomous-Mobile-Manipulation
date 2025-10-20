@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import math
 import time
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, List
 
 import rclpy
 from rclpy.node import Node
@@ -17,7 +17,7 @@ from rclpy.duration import Duration
 from rclpy.time import Time
 
 from sensor_msgs.msg import Image, CameraInfo
-from geometry_msgs.msg import PoseStamped, Point, Quaternion
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion  
 from std_msgs.msg import Header
 
 from cv_bridge import CvBridge
@@ -44,6 +44,7 @@ def _depth_to_meters(depth_patch: np.ndarray) -> Optional[float]:
     vals = vals[np.isfinite(vals)]
     if vals.size == 0:
         return None
+    # If 16-bit millimeters, convert to meters
     if depth_patch.dtype == np.uint16:
         vals = vals / 1000.0
     return float(np.median(vals))
@@ -75,17 +76,33 @@ def _parse_aliases(alias_list) -> Dict[str, str]:
     return mapping
 
 
+def _robust_depth_at(u: int, v: int, depth: Optional[np.ndarray]) -> Optional[float]:
+    """Try growing patches around (u,v) until we get a sane Z."""
+    if depth is None:
+        return None
+    H, W = depth.shape[:2]
+    def clamp(a, lo, hi): return max(lo, min(hi, a))
+    for half in (3, 5, 7, 9):
+        uh0 = clamp(u - half, 0, W - 1)
+        uh1 = clamp(u + half + 1, 0, W)
+        vh0 = clamp(v - half, 0, H - 1)
+        vh1 = clamp(v + half + 1, 0, H)
+        Z = _depth_to_meters(depth[vh0:vh1, uh0:uh1])
+        if Z is not None and math.isfinite(Z) and Z > 0.0:
+            return Z
+    return None
+
+
 class DetectObjectServer(Node):
     def __init__(self):
         super().__init__("perception_server")
 
-        # --- Parameters (names unchanged) ---
         self.declare_parameter("color_image_topic", "/j100_0000/sensors/camera_0/color/image")
         self.declare_parameter("depth_image_topic", "/j100_0000/sensors/camera_0/depth/image")
         self.declare_parameter("camera_info_topic", "/j100_0000/sensors/camera_0/color/camera_info")
 
         self.declare_parameter("action_name", "perception/detect_object")
-        self.declare_parameter("target_frame", "map")
+        self.declare_parameter("target_frame", "base_link")
 
         self.declare_parameter("model_path", "")
         self.declare_parameter("confidence", 0.35)
@@ -97,7 +114,6 @@ class DetectObjectServer(Node):
 
         self.declare_parameter("timeout_sec", 10.0)
 
-        # IMPORTANT: non-empty STRING_ARRAY default (Humble treats [] as BYTE_ARRAY)
         self.declare_parameter("class_aliases", [''])
         self.declare_parameter("default_class_id", "sports ball")
 
@@ -127,7 +143,6 @@ class DetectObjectServer(Node):
 
         self.get_logger().info(f"class_map loaded: {self.class_map}")
 
-        # Bridge & buffers
         self.bridge = CvBridge()
         self._rgb: Optional[Tuple[Image, np.ndarray]] = None
         self._depth: Optional[Tuple[Image, np.ndarray]] = None
@@ -154,7 +169,6 @@ class DetectObjectServer(Node):
         self.create_subscription(Image, self.depth_topic, self._on_depth, qos_profile_sensor_data)
         self.create_subscription(CameraInfo, self.cam_info_topic, self._on_caminfo, qos_caminfo)
 
-        # Debug publisher
         self.pub_debug = self.create_publisher(Image, self.debug_topic, 10) if self.publish_debug else None
 
         # YOLO (lazy)
@@ -253,6 +267,7 @@ class DetectObjectServer(Node):
         except Exception:
             pass
 
+        # Parse target & timeout
         target_req = (
             getattr(req, "class_id", None)
             or getattr(req, "target_class", None)
@@ -270,7 +285,7 @@ class DetectObjectServer(Node):
         if not _HAVE_YOLO:
             goal_handle.abort()
             result.success = False
-            result.message = "YOLO not available on this system"
+            result.message = "yolo_unavailable"
             result.pose = PoseStamped()
             result.confidence = 0.0
             return result
@@ -281,7 +296,7 @@ class DetectObjectServer(Node):
             self.get_logger().error(f"Failed to load YOLO: {e}")
             goal_handle.abort()
             result.success = False
-            result.message = f"YOLO init error: {e}"
+            result.message = f"yolo_init_error:{e}"
             result.pose = PoseStamped()
             result.confidence = 0.0
             return result
@@ -290,21 +305,29 @@ class DetectObjectServer(Node):
             f"Detecting '{target_req}' (YOLO label: '{yolo_label}') for up to {timeout:.1f}s"
         )
 
-        # Use wall clock for timeout so we never hang if sim time isn't ticking.
+        # Ensure we have RGB + Depth + K before spending the timeout inside the loop
+        start_wait = time.monotonic()
+        while rclpy.ok():
+            have_all = (self._rgb is not None) and (self._depth is not None) and (self._K is not None)
+            if have_all:
+                break
+            if (time.monotonic() - start_wait) > timeout:
+                self.get_logger().warn("Timeout waiting for RGB/Depth/CameraInfo.")
+                goal_handle.abort()
+                result.success = False
+                result.message = "timeout_waiting_for_rgb_depth_or_caminfo"
+                result.pose = PoseStamped()
+                result.confidence = 0.0
+                return result
+            time.sleep(0.02)
+
+        # Main loop 
         t0 = time.monotonic()
         last_debug_pub = 0.0
-        best_pose_map = None
+        best_pose_map: Optional[PoseStamped] = None
         best_conf = 0.0
-        warned_missing = False
 
         while rclpy.ok() and (time.monotonic() - t0) < timeout:
-            if self._rgb is None:
-                if not warned_missing:
-                    self.get_logger().info("Waiting for RGB frames…")
-                    warned_missing = True
-                time.sleep(0.02)
-                continue
-
             rgb_msg, rgb = self._rgb
             depth = self._depth[1] if self._depth is not None else None
             K = self._K
@@ -319,11 +342,13 @@ class DetectObjectServer(Node):
                 time.sleep(0.05)
                 continue
 
-            # Prepare debug image every ~0.1s regardless of depth/K availability
+            # Prepare debug image periodically
             debug_img = rgb.copy()
             now_sec = time.monotonic()
 
-            chosen = None
+            # Collect candidates of the requested class
+            candidates: List[Tuple[float, Tuple[float, float, float, float], str]] = []
+
             for r in preds:
                 if r.boxes is None or len(r.boxes) == 0:
                     continue
@@ -348,47 +373,34 @@ class DetectObjectServer(Node):
                         )
 
                     if yolo_label and (label.lower() == yolo_label.lower()):
-                        if (chosen is None) or (c > chosen["conf"]):
-                            chosen = {"conf": c, "bbox": (x1, y1, x2, y2), "label": label}
+                        candidates.append((c, (x1, y1, x2, y2), label))
 
             # publish debug continuously while searching
             if (self.publish_debug or self.show_debug) and (now_sec - last_debug_pub > 0.1):
                 self._publish_debug(debug_img, frame_id)
                 last_debug_pub = now_sec
 
-            # If no matching box yet, keep looping
-            if chosen is None:
+            if not candidates:
                 time.sleep(0.02)
                 continue
 
-            # If we don't yet have depth or intrinsics, show label but wait for pose
-            if depth is None or K is None:
-                x1, y1, x2, y2 = chosen["bbox"]
+            # Choose the first high-confidence candidate that has valid depth
+            candidates.sort(key=lambda t: -t[0])
+            chosen = None
+            for c, (x1, y1, x2, y2), label in candidates:
                 u = int((x1 + x2) * 0.5)
                 v = int((y1 + y2) * 0.5)
-                if self.publish_debug or self.show_debug:
-                    dbg = debug_img
-                    cv2.circle(dbg, (u, v), 3, (0, 255, 255), -1)
-                    cv2.putText(
-                        dbg, "[no depth/K yet]", (u + 5, v + 5),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1
-                    )
-                    self._publish_debug(dbg, frame_id)
+                Z = _robust_depth_at(u, v, depth)
+                if Z is not None:
+                    chosen = (c, (x1, y1, x2, y2), label, u, v, Z)
+                    break
+
+            if chosen is None:
+                # detections exist but no valid depth yet; keep looping
                 time.sleep(0.02)
                 continue
 
-            # Compute depth at box center
-            x1, y1, x2, y2 = chosen["bbox"]
-            u = int((x1 + x2) * 0.5)
-            v = int((y1 + y2) * 0.5)
-            half = 3
-            uh0 = max(0, u - half); uh1 = min(depth.shape[1], u + half + 1)
-            vh0 = max(0, v - half); vh1 = min(depth.shape[0], v + half + 1)
-            Z = _depth_to_meters(depth[vh0:vh1, uh0:uh1])
-            if Z is None or not math.isfinite(Z) or Z <= 0.0:
-                time.sleep(0.02)
-                continue
-
+            best_conf, (x1, y1, x2, y2), best_label, u, v, Z = chosen
             xnorm, ynorm = _pixel_to_camera_ray(float(u), float(v), K)
             X = xnorm * Z
             Y = ynorm * Z
@@ -400,44 +412,71 @@ class DetectObjectServer(Node):
             cam_pose.pose.position = Point(x=X, y=Y, z=Z)
             cam_pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
 
+            # Transform to target frame (pass Pose, then wrap back into PoseStamped)
             try:
-                tf = self.tf_buf.lookup_transform(self.target_frame, cam_pose.header.frame_id, Time())
-                map_pose = do_transform_pose(cam_pose, tf)
+                if self.target_frame == cam_pose.header.frame_id:
+                    map_pose = cam_pose  
+                else:
+                    # Try time-synced first, then fallback to latest
+                    try:
+                        tf = self.tf_buf.lookup_transform(
+                            self.target_frame, cam_pose.header.frame_id,
+                            Time.from_msg(cam_pose.header.stamp)
+                        )
+                    except Exception:
+                        tf = self.tf_buf.lookup_transform(
+                            self.target_frame, cam_pose.header.frame_id, Time()
+                        )
+                    pose_in_target: Pose = do_transform_pose(cam_pose.pose, tf)  
+                    map_pose = PoseStamped()
+                    map_pose.header.stamp = cam_pose.header.stamp
+                    map_pose.header.frame_id = self.target_frame
+                    map_pose.pose = pose_in_target
             except Exception as e:
-                self.get_logger().warn(f"TF transform {cam_pose.header.frame_id} -> {self.target_frame} failed: {e}")
+                self.get_logger().warn(
+                    f"TF transform {cam_pose.header.frame_id} -> {self.target_frame} failed: {e}"
+                )
                 time.sleep(0.05)
                 continue
 
+            # Annotate and publish debug
             if self.publish_debug or self.show_debug:
                 dbg = debug_img
                 cv2.circle(dbg, (u, v), 3, (0, 255, 255), -1)
-                txt = f"{chosen['label']} {chosen['conf']:.2f} Z={Z:.2f}m"
+                txt = f"{best_label} {best_conf:.2f} Z={Z:.2f}m"
                 cv2.putText(dbg, txt, (int(x1), max(10, int(y1) - 8)),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
                 self._publish_debug(dbg, frame_id)
 
             best_pose_map = map_pose
-            best_conf = float(chosen["conf"])
             break
 
         # Finish
         if best_pose_map is None:
-            self.get_logger().info("Detection timed out / not found or no depth/K available.")
+            msg = "unknown_failure"
+            if not self._rgb or not self._depth or self._K is None:
+                msg = "timeout_waiting_for_rgb_depth_or_caminfo"
+            elif self._rgb is not None:
+                if not candidates:
+                    msg = "no_detections_for_label"
+                else:
+                    msg = "detections_found_but_no_valid_depth_or_tf"
+            self.get_logger().info(f"Detection failed: {msg}")
             goal_handle.abort()
             result.success = False
-            result.message = "not_found_or_missing_depth_K"
+            result.message = msg
             result.pose = PoseStamped()
             result.confidence = 0.0
         else:
             self.get_logger().info(
-                f"Detection OK → map xyz=({best_pose_map.pose.position.x:.2f}, "
+                f"Detection OK → {self.target_frame} xyz=({best_pose_map.pose.position.x:.2f}, "
                 f"{best_pose_map.pose.position.y:.2f}, {best_pose_map.pose.position.z:.2f})"
             )
             goal_handle.succeed()
             result.success = True
             result.message = "ok"
             result.pose = best_pose_map
-            result.confidence = best_conf
+            result.confidence = float(best_conf)
 
         return result
 
@@ -446,7 +485,6 @@ def main():
     rclpy.init()
     node = DetectObjectServer()
     try:
-        # Single-threaded is fine here; the loop yields with time.sleep.
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
